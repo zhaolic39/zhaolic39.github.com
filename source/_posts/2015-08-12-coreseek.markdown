@@ -1,0 +1,284 @@
+---
+layout: post
+title: coreseek使用记录
+date: 2015-08-12 21:21:56
+comments: true
+categories: 全文检索
+---
+项目需要用到全文检索。  
+之前接触的都是java中`lucene` + 分词库的解决方案。现在公司使用的都是`coreseek`，且项目使用`mongodb`作为数据库，团长让我研究一下解决的方案，所以记录一下学习与使用过程。
+<!-- more -->
+
+## Coreseek
+[Coreseek](http://www.coreseek.cn/)是一个开源的中文全文检索引擎，基于`Sphinx`研发并独立发布。  
+而`Sphinx`是由俄罗斯人开发的高性能全文检索引擎。  
+全文检索引擎本身的原理是类似的，网上有很多文章介绍的挺好，这里直接引用一下：
+* [Lucene学习总结之一：全文检索的基本原理](http://www.cnblogs.com/forfuture1978/archive/2009/12/14/1623594.html)  
+
+`Sphinx`的一大特点是与`mysql`数据库结合良好，只需在配置文件中写好SQL查询语句就能定义索引数据库源。  
+但此次项目使用`mongodb`，`Sphinx`不能直接支持。
+
+### 配置索引数据源
+按照[官方手册](http://www.coreseek.cn/products-install/step_by_step/)配置索引数据源，例如一个`mysql`数据源的示例配置：
+```
+#源定义
+source mysql
+{
+	type				= mysql    #表示使用mysql数据源
+
+	sql_host				= localhost    #表示数据库服务器的链接地址
+	sql_user				= root          #表示数据库的用户名
+	sql_pass				= 123456      #表示数据库的密码
+	sql_db				= test          #表示数据库的名称
+	sql_port				= 3306         #表示数据库的端口
+	sql_query_pre			= SET NAMES utf8
+
+	#从数据库之中读取数据的SQL语句设置
+	sql_query				= SELECT id, group_id, UNIX_TIMESTAMP(date_added) AS date_added, title, content FROM documents
+										#sql_query第一列id需为整数，且被系统使用，无需再设置sql_attr_uint
+
+	#使用sql_attr设置的字段，只能作为属性，使用SphinxClient::SetFilter()进行过滤；未被设置的字段，自动作为全文检索的字段，使用SphinxClient::Query("搜索字符串")进行全文搜索；
+	#title、content作为字符串/文本字段，被全文索引
+
+	sql_attr_uint			= group_id				   #从SQL读取到的值必须为整数；sql_attr_uint表示该字段是数值属性
+	sql_attr_timestamp		= date_added      #从SQL读取到的值必须为整数，作为时间属性；sql_attr_timestamp表示该字段是时间属性；可以不用该配置
+
+    sql_query_info_pre      = SET NAMES utf8                                        #命令行查询时，设置正确的字符集，3.2.14开始支持
+	sql_query_info			= SELECT * FROM documents WHERE id=$id  #命令行查询时，从数据库读取原始数据信息
+}
+
+#index定义
+index mysql
+{
+    source            = mysql             #对应的source名称
+    path            = var/data/mysql #索引存放的位置，路径为var/data
+    docinfo            = extern
+    mlock            = 0
+    morphology        = none
+    min_word_len        = 1
+    html_strip                = 0
+    #charset_dictpath = /usr/local/mmseg3/etc/    #BSD、Linux环境下设置，/符号结尾
+    charset_dictpath = etc/ #Windows环境下设置，/符号结尾
+    charset_type        = zh_cn.utf-8
+
+}
+```
+### 建立索引数据
+执行`indexer`建立索引数据，命令格式为：  
+>indexer -c 配置文件的路径 index名称
+
+例如:  
+```
+/usr/local/coreseek/bin/indexer -c etc/csft.conf questions
+```
+### 启动检索服务
+检索服务需要配置守护进程的相关选项，示例为：
+```
+#定义searchd守护进程的相关选项
+searchd
+{
+           #定义监听的IP和端口
+   #listen            = 127.0.0.1
+   #listen            =172.16.88.100:3312
+    listen            = 3312
+    listen            = /var/run/searchd.sock
+           #定义log的位置
+   log                =/usr/local/coreseek/var/log/searchd.log
+           #定义查询log的位置
+   query_log          =/usr/local/coreseek/var/log/query.log
+           #定义网络客户端请求的读超时时间
+   read_timeout       = 5
+           #定义子进程的最大数量
+   max_children       = 300
+           #设置searchd进程pid文件名
+   pid_file           =/usr/local/coreseek/var/log/searchd.pid
+           #定义守护进程在内存中为每个索引所保持并返回给客户端的匹配数目的最大值
+   max_matches        = 100000
+           #启用无缝seamless轮转，防止searchd轮转在需要预取大量数据的索引时停止响应
+    #也就是说在任何时刻查询都可用，或者使用旧索引，或者使用新索引
+   seamless_rotate    = 1
+           #配置在启动时强制重新打开所有索引文件
+   preopen_indexes    = 1
+           #设置索引轮转成功以后删除以.old为扩展名的索引拷贝
+   unlink_old         = 1
+           # MVA更新池大小，这个参数不太明白
+   mva_updates_pool   = 1M
+           #最大允许的包大小
+   max_packet_size    = 32M
+           #最大允许的过滤器数
+   max_filters        = 256
+           #每个过滤器最大允许的值的个数
+   max_filter_values  = 4096
+}
+```
+配置完毕后，执行`searchd`启动或关闭检索服务，命令格式为：
+>	searchd -c 配置文件的路径  
+   searchd -c 配置文件的路径 --stop
+
+例如：
+```
+/usr/local/coreseek/bin/searchd -c etc/csft.conf
+/usr/local/coreseek/bin/searchd -c etc/csft.conf --stop
+```
+
+### 程序中api的调用
+官方的安装内提供了`Php`, `Python`, `Java`, `C`, `Ruby`等语言的api，这里列出一个项目中使用的Java版api调用示例：
+```java
+SphinxClient cl = new SphinxClient();
+cl.SetServer("192.168.19.135", 9314);  //sphinx服务器与端口
+cl.SetMatchMode(SphinxClient.SPH_MATCH_ANY);	//匹配任意
+cl.SetSortMode(SphinxClient.SPH_SORT_RELEVANCE, "");  //按匹配程序排序
+cl.SetLimit(0, 20);                     //分页参数
+int[] users = {0, 839017};
+cl.SetFilter("check_user", users, false);  //根据条件过滤
+
+SphinxResult res = cl.Query("一元一次方程", "faq_question"); //指定哪个索引集中检索
+System.out.println("Query retrieved " + res.total + " of " + res.totalFound + " matches in " + res.time + " sec.");
+System.out.println("Query stats:");
+for(int i=0; i<res.words.length; i++){
+	SphinxWordInfo wordInfo = res.words[i];   //words返回分词结果
+	System.out.println("\t'" + wordInfo.word + "' found " + wordInfo.hits + " times in " + wordInfo.docs + " documents");
+}
+for(int i=0; i<res.matches.length; i++){
+	SphinxMatch info = res.matches[i];   //matches返回搜索结果
+	System.out.println((i + 1) + ". id=" + info.docId + ", weight=" + info.weight);
+}
+
+```
+详细的[api参考](http://www.coreseek.cn/docs/coreseek_3.2-sphinx_0.9.9.html#api-reference)。
+## 在Coreseek/Sphinx中支持Mongodb数据源
+在`Sphinx`中支持`Mongodb`主要有两种方式，`xmlpipe`与`python`数据源。
+
+### xmlpipe数据源
+编写一个自己的服务，将`Mongodb`数据转换成`Sphinx`能够识别的`xml`文本数据源，再调用api生成索引数据。  
+`xml`数据示例：
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<sphinx:docset>
+	<sphinx:schema>
+	<sphinx:field name="subject"/>
+	<sphinx:field name="content"/>
+	<sphinx:attr name="published" type="timestamp"/>
+	<sphinx:attr name="author_id" type="int" bits="16" default="1"/>
+	</sphinx:schema>
+	<sphinx:document id="1">
+		<subject>愚人节最佳蛊惑爆料 谷歌300亿美元收购百度</subject>
+		<published>1270131607</published>
+		<content>据国外媒体报道，谷歌将巨资收购百度，涉及金额高达300亿美元。谷歌借此重返大陆市场。......
+		</content>
+		<author_id>1</author_id>
+	</sphinx:document>
+	<sphinx:document id="2">
+		<subject>Twitter主页改版 推普通用户消息增加趋势话题</subject>
+		<published>1270135548</published>
+		<content>4月1日消息，据国外媒体报道，Twitter本周二推出新版主页，目的很简单：帮助新用户了解Twitter和增加用户黏稠度。......
+		</content>
+		<author_id>1</author_id>
+	</sphinx:document>
+	<sphinx:document id="3">
+		<subject>死都要上！Opera Mini 体验版抢先试用</subject>
+		<published>1270094460</published>
+		<content>Opera一直都被认为是浏览速度飞快，同时在移动平台上更是占有不少的份额。......
+		</content>
+		<author_id>2</author_id>
+	</sphinx:document>
+</sphinx:docset>
+```
+`Sphinx`的配置：
+```
+#源定义
+source xml
+{
+	type		    = xmlpipe2
+	xmlpipe_command = bin\cat var/test/test.xml     #此处也可使用其他可执行程序输出xml数据
+}
+```
+参考：
+* [数据源配置：xml数据源](http://www.coreseek.cn/products-install/datasource/)  
+
+### python数据源
+`Python`数据源也称为万能数据源，借助`Python`强大的灵活性与活跃度，`Sphinx`做了一层桥接，此方式几乎可以读取所有形式的数据。  
+官网的代码例子：
+```python
+# -*- coding:utf-8 -*-
+# coreseek3.2 python source演示操作mssql数据库
+# author: HonestQiao
+# date: 2010-06-01 10:05
+
+from os import path
+import os
+import sys
+import pymssql
+import datetime
+
+class MainSource(object):
+    def __init__(self, conf):
+        self.conf =  conf
+        self.idx = 0
+        self.data = []
+        self.conn = None
+        self.cur = None
+
+    def GetScheme(self):  #获取结构，docid、文本、整数
+        return [
+            ('threadid' , {'docid':True, } ),
+            ('title', { 'type':'text'} ),
+            ('context', { 'type':'text'} ),
+            ('date', {'type':'integer'} ),
+        ]
+
+    def GetFieldOrder(self): #字段的优先顺序
+        return [('title', 'context')]
+
+    def Connected(self):   #如果是数据库，则在此处做数据库连接
+        if self.conn==None:
+            self.conn = pymssql.connect(host='127.0.0.1', user='root', password='123456', database='bbs', as_dict=True)
+            self.cur = self.conn.cursor()
+            sql = 'SELECT threadid,title,content,date FROM ss_bbs_topic'
+            self.cur.execute(sql)
+            self.data = [ row for row in self.cur]
+        pass
+
+    def NextDocument(self):   #取得每一个文档记录的调用
+        if self.idx < len(self.data):
+            item = self.data[self.idx]
+            self.docid = self.threadid = item['threadid'] #'docid':True
+            self.title = item['title'].encode('utf-8')
+            self.context = item['context'].encode('utf-8')
+            self.date = item['date']
+            self.idx += 1
+            return True
+        else:
+            return False
+
+if __name__ == "__main__":    #直接访问演示部分
+    conf = {}
+    source = MainSource(conf)
+    source.Connected()
+
+    while source.NextDocument():
+        print "id=%d, subject=%s" % (source.docid, source.title)
+    pass
+#eof
+```
+其中核心的概念是利用`python`将目标数据按规定的模型读取至`python`虚拟机中，`Sphinx`再从虚拟机里读出索引源数据。  
+相关配置文件：
+```xml
+#python路径定义
+python
+{
+    path = /usr/local/coreseek/etc/pysource			#BSD、Linux环境下设置
+    path = /usr/local/coreseek/etc/pysource/csft_demo	#BSD、Linux环境下设置
+    #path = etc/pysource			#Windows环境下设置，最好给出绝对路径
+    #path = etc/pysource/csft_demo	#Windows环境下设置，最好给出绝对路径
+}
+
+#源定义
+source python
+{
+    type = python
+    name = csft_demo.MainSource #对应etc/pysource/csft_demo/__init__.py中的MainSource
+}
+```
+参考：
+* [【万能】数据源：python数据源](http://www.coreseek.cn/products-install/python/)  
