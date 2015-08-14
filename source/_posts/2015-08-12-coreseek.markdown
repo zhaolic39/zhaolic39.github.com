@@ -7,11 +7,12 @@ categories: 全文检索
 ---
 项目需要用到全文检索。  
 之前接触的都是java中`lucene` + 分词库的解决方案。现在公司使用的都是`coreseek`，且项目使用`mongodb`作为数据库，团长让我研究一下解决的方案，所以记录一下学习与使用过程。
-<!-- more -->
 
 ## Coreseek
-[Coreseek](http://www.coreseek.cn/)是一个开源的中文全文检索引擎，基于`Sphinx`研发并独立发布。  
-而`Sphinx`是由俄罗斯人开发的高性能全文检索引擎。  
+[Coreseek](http://www.coreseek.cn/)是一个开源的中文全文检索引擎，基于`Sphinx`研发并独立发布。在`Sphinx`在基础上增加了`LibMMSeg`中文分词包，实现了对中文的分词与检索。
+<!-- more -->
+
+`Sphinx`是由俄罗斯人开发的高性能全文检索引擎。  
 全文检索引擎本身的原理是类似的，网上有很多文章介绍的挺好，这里直接引用一下：
 * [Lucene学习总结之一：全文检索的基本原理](http://www.cnblogs.com/forfuture1978/archive/2009/12/14/1623594.html)  
 
@@ -282,3 +283,9 @@ source python
 ```
 参考：
 * [【万能】数据源：python数据源](http://www.coreseek.cn/products-install/python/)  
+### 项目服务架构
+项目使用`xmlpipe`的方案支持`mongodb`数据，实现后的架构如图：
+![coreseek1](http://pan.plyz.net/d.asp?u=1761882557&p=blog/coreseek1.png)
+* 索引数据源服务定时生成`xml`，调用`coreseek`命令生成索引
+* 客户端请求`Restful`接口，服务端组装搜索条件，调用`coreseek`的`api`返回数据主键，
+* 从`mongodb`中获得业务数据，最后组装`Json`结果返回给客户端
