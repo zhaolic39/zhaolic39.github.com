@@ -11,7 +11,7 @@ categories: web前端
 ### 基础
 #### Module 模块
 `module`是按业务划分的模块，属于逻辑上的概念，一个`module`下可以包含多个`sevice`,多个`controller`,自己的`router`等。
-
+<!-- more -->
 #### Controller 控制器
 `controller`是与模版页面交流的代码，html可以直接访问`#scope`上的对象、属性、函数。
 一般在`controller`中不含有复杂的业务逻辑，例如接口调用的代码应该放在`service`层中。
@@ -57,7 +57,7 @@ angular.module('myApp.filters', [])
 ```
 
 ### 扩展
-#### Restangular 替代\$http和$resource
+#### Restangular 替代$http和$resource
 比原生好用的restful接口访问库，[mgonto/restangular][1]，一些例子：
 ```javascript
 // GET to http://www.google.com/1 You set the URL in this case
