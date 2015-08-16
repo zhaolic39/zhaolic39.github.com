@@ -285,7 +285,7 @@ source python
 * [【万能】数据源：python数据源](http://www.coreseek.cn/products-install/python/)  
 ### 项目服务架构
 项目使用`xmlpipe`的方案支持`mongodb`数据，实现后的架构如图：
-![coreseek1](image/coreseek1.png)
+![coreseek1](http://7xl4i4.com1.z0.glb.clouddn.com/coreseek1.png)
 * 索引数据源服务定时生成`xml`，调用`coreseek`命令生成索引
 * 客户端请求`Restful`接口，服务端组装搜索条件，调用`coreseek`的`api`返回数据主键，
 * 从`mongodb`中获得业务数据，最后组装`Json`结果返回给客户端
