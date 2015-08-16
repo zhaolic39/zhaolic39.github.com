@@ -90,4 +90,30 @@ $stateProvider
 ```
 * /inbox/1匹配第一个状态。
 * /inbox/1/priority匹配第二个状态。
+
+#### 异步加载js
+如果`web`项目很大，不希望一开始就把所有的js一次加载，可以在路由中配合使用`requirejs`实现异步加载。  
+关键点在于路由中的`resolve`。`resolve`方法会在切换页面之前执行并阻塞路由动作，因此利用这个方法来实现异步加载。
+例：
+```javascript
+$routeProvider.
+    when('/phones', {
+           templateUrl: 'partials/phone-list.html',
+           controller: PhoneListCtrl,
+           resolve: function(){
+              //这里使用实现加载js的逻辑
+              delay: function($q) {
+                var delay = $q.defer(),
+                load = function(){
+                    $.getScript('/js/xxxxx.js',function(){
+                      delay.resolve();
+                    });
+                };
+                load();
+                return delay.promise;
+              }
+            }
+         })
+```
+* 要加载的js可以用`requirejs`的写法实现模块依赖，让结构更清晰。
   [1]: https://github.com/mgonto/restangular
