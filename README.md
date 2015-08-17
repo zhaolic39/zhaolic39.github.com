@@ -1,0 +1,2 @@
+# posts
+hexo posts
