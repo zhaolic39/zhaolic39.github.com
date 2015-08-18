@@ -41,3 +41,6 @@ public class DefaultAppConfig {
 `@EnableCaching` ：启用缓存注解  `<cache:annotation-driven/>`
 `@EnableTransactionManagement` ： 启用注解式事务管理 `<tx:annotation-driven />`
 `@EnableWebMvcSecurity` ： 启用`SpringSecurity`安全验证
+
+* 参考资料：  
+[springmvc基于java config的实现](http://blog.csdn.net/xiejx618/article/details/42471135)
