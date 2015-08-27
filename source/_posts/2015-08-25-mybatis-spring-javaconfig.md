@@ -10,7 +10,7 @@ categories: java
 最近公司有一个项目，主程让我用`Spring`与`Mybatis`搭建服务端框架，这里就做一下简单的学习记录。
 <!-- more -->
 ## Java Config方式的Mybatis启动配置
-首先在maven中加上Mybatis与mybatis-spring的依赖：
+首先在`maven`中加上`Mybatis`与`mybatis-spring`的依赖：
 ```xml
 <dependency>
    <groupId>org.mybatis</groupId>
@@ -89,7 +89,11 @@ public class JdbcConfig {
     }
 }
 ```
-`@Configuration`表明此类用作`Spring配置`，`@PropertySource`说明读取哪个配置文件，`@Value`将`properties`中的配置项注入进变量，`@Bean`注解的方法表明实例化对象。还有需要注意的就是`ResourcePatternResolver`类的用法，是用来加载工程配置文件的。
+* `@Configuration`表明此类用作`Spring配置`
+* `@PropertySource`说明读取哪个配置文件
+* `@Value`将`properties`中的配置项注入进变量
+* `@Bean`注解的方法表明实例化对象。  
+* `ResourcePatternResolver`是用来加载工程配置文件。
 
 ## Mybatis的xml映射文件
 与`Hibernate`类似，`Mybatis`需要写`xml`配置来实现`Java`类与数据库表之间的映射关系，更多的，`Mybatis`框架执行的所有`sql`也都配置在`xml`中。
@@ -136,10 +140,14 @@ public class JdbcConfig {
   </update>
 </mapper>
 ```
-根节点`mapper`中的`namespace`声明了此配置的唯一编号，*在此后的`java`的`api`调用就需要用到此属性*。
-`resultMap`定义表到`java`实体类之间的字段映射关系， `column`是表字段，`property`是类属性，`jdbcType`是表字段类型。  
-`sql`节点在这里定义了一个`sql`查询片段，使用`include`语法拼接，用于简化配置。  
-`select`，`insert`，`update`，`delete`节点定义四种`sql`操作的方法。`id`定义方法的标识；`parameterType`说明方法的参数类型，可以是`javabean`，但一个方法只能有一个输入参数。
+* 根节点`mapper`中的`namespace`声明了此配置的唯一编号，*在此后的`java`的`api`调用就需要用到此属性*。
+* `resultMap`定义表到`java`实体类之间的字段映射关系
+* `column`是表字段
+* `property`是类属性
+* `jdbcType`是表字段类型。  
+* `sql`节点在这里定义了一个`sql`查询片段，使用`include`语法拼接，用于简化配置。  
+* `select`，`insert`，`update`，`delete`节点定义四种`sql`操作的方法。`id`定义方法的标识；
+* `parameterType`说明方法的参数类型，可以是`javabean`，但一个方法只能有一个输入参数。
 
 更详细的`mapper`配置说明参考官网：
 * [Mapper XML 文件](http://mybatis.github.io/mybatis-3/zh/sqlmap-xml.html)
@@ -215,7 +223,7 @@ public class MyBatisGenerator {
 ## 与Spring整合
 在`j2ee`的各种开源框架中，我们最关心的可能就是怎么与`Spring`做整合。
 ### 数据映射器 MapperFactoryBean
-`Mybatis`提供了一种简易的整合方式，使用`class`的方式定义`mapper`，而不需要以配置`xml`。  
+`Mybatis`提供了一种简易的整合方式，使用`class`的方式定义`mapper`，而不需要配置`xml`。  
 例如定义一个`interface`的`mapper`：
 ```java
 public interface UserMapper {
