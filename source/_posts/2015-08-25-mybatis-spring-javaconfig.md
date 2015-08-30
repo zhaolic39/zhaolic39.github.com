@@ -240,5 +240,61 @@ public interface UserMapper {
 ```
 `Spring`容器中就产生了`userMapper`实例可以来执行我们想要的数据操作。这种方式有点类似`spring data`中`CrudRepository`的`@Query`用法。
 
+### 抽象类SqlSessionDaoSupport的整合方式
+从前面的启动配置我们知道了，`Mybatis`的`api`入口是`sqlSessionFactory`。`Mybatis`提供`SqlSessionDaoSupport`抽象类来方便获取`sqlSession`。  
+先看一个UserDao的实现：
+```java
+public class UserDao extends SqlSessionDaoSupport{  
+  @Autowired
+  public void setSqlSessionTemplate(SqlSessionTemplate sqlSessionTemplate) {
+    super.setSqlSessionTemplate(sqlSessionTemplate);
+  }
+
+  public User getUserById(User user) {  
+     return (User) getSqlSession().selectOne("com.xxt.ibatis.dbcp.domain.User.getUser", user);  
+  }  
+}  
+```
+继承`SqlSessionDaoSupport`可以获得`getSqlSession`方法来得到`sqlSession`。然后通过`sqlSession`的`api`最终调用到`mapper`里配置的`sql`程序。  
+sqlSession几个常用的api：
+>```java
+<T> T selectOne(String statement, Object parameter)  
+<E> List<E> selectList(String statement, Object parameter)  
+<K,V> Map<K,V> selectMap(String statement, Object parameter, String mapKey)  
+int insert(String statement, Object parameter)  
+int update(String statement, Object parameter)  
+int delete(String statement, Object parameter)
+```
+
+第一个参数表示mapper中方法的唯一标识，结构为：*mapper标识* + . + *方法标识*。  
+### mybatis-spring 1.2版本中SqlSessionDaoSupport的变化
+首先看1.2版本中`SqlSessionDaoSupport`的注释信息：
+>```java
+/**
+ * Convenient super class for MyBatis SqlSession data access objects.
+ * It gives you access to the template which can then be used to execute SQL methods.
+ * <p>
+ * This class needs a SqlSessionTemplate or a SqlSessionFactory.
+ * If both are set the SqlSessionFactory will be ignored.
+ * <p>
+ * {code Autowired} was removed from setSqlSessionTemplate and setSqlSessionFactory
+ * in version 1.2.0.
+ *
+ * @author Putthibong Boonbong
+ *
+ * @see #setSqlSessionFactory
+ * @see #setSqlSessionTemplate
+ * @see SqlSessionTemplate
+ * @version $Id$
+ */
+ ```
+
+之前版本中setSqlSessionTemplate和setSqlSessionFactory是Autowired，1.2之后需要我们手动注入。  
+这个改动应该是为了支持一个项目中建立多数据源的场景，我们可以用SqlSessionDaoSupport创建多个DAO层基类，选择不同的数据源注入。
+### Mybatis插件配置
+
+
+
 参考文章：
 * [spring与mybatis三种整合方法](http://nirvana1988.iteye.com/blog/971246)
+* [Java API sqlSeesion](http://mybatis.github.io/mybatis-3/zh/java-api.html#sqlSessions)
