@@ -291,10 +291,9 @@ int delete(String statement, Object parameter)
 
 之前版本中setSqlSessionTemplate和setSqlSessionFactory是Autowired，1.2之后需要我们手动注入。  
 这个改动应该是为了支持一个项目中建立多数据源的场景，我们可以用SqlSessionDaoSupport创建多个DAO层基类，选择不同的数据源注入。
-### Mybatis插件配置
-
-
 
 参考文章：
 * [spring与mybatis三种整合方法](http://nirvana1988.iteye.com/blog/971246)
 * [Java API sqlSeesion](http://mybatis.github.io/mybatis-3/zh/java-api.html#sqlSessions)
+
+### Mybatis插件配置
