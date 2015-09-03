@@ -318,7 +318,7 @@ int delete(String statement, Object parameter)
     <version>3.7.1</version>
 </dependency>
 ```
-在初始化sqlSessionFactory时加上插件配置：
+在初始化`sqlSessionFactory`时加上插件配置：
 ```java
 @Bean
 public SqlSessionFactoryBean sqlSessionFactory() throws IOException {
@@ -330,7 +330,7 @@ public SqlSessionFactoryBean sqlSessionFactory() throws IOException {
     Properties p = new Properties();//插件属性配置
     p.put("dialect", "mysql"); //数据库言
     p.put("reasonable", "true");//参数合理化，如果pageNum<1会查询第一页，如果pageNum>pages会查询最后一页
-    p.put("offsetAsPageNum", "true"); //将RowBounds第一个参数offset当成pageNum页码使用
+    p.put("offsetAsPageNum", "trsue"); //将RowBounds第一个参数offset当成pageNum页码使用
     pageHelper.setProperties(p);
     plugings[0] = pageHelper;
 
@@ -344,7 +344,7 @@ public SqlSessionFactoryBean sqlSessionFactory() throws IOException {
 ```
 其中属性配置详细信息参考项目主页。  
 
-在调用Mybatis的api时增加RowBounds参数实现分页：
+在调用`Mybatis`的`api`时增加`RowBounds`参数实现分页：
 ```java
 List<Country> list = sqlSession.selectList("x.y.selectIf", null, new RowBounds(1, 10));
 ```
