@@ -296,4 +296,59 @@ int delete(String statement, Object parameter)
 * [spring与mybatis三种整合方法](http://nirvana1988.iteye.com/blog/971246)
 * [Java API sqlSeesion](http://mybatis.github.io/mybatis-3/zh/java-api.html#sqlSessions)
 
-### Mybatis插件配置
+## Mybatis插件配置
+`Mybatis`提供了插件机制实现了功能扩展
+
+### 分页插件PageHelper
+数据库列表查询少不了分页功能，怎么在代码级别上简单有效地处理分页逻辑总是一大挑战。  
+实现分页功能关键是根据 *两个参数* 得到 *两个数据*：
+* 两个参数：*数据偏移量* 和 *页面大小*（或者通过 *当前页码* 和 *页面大小* 进行转换）
+* 两个数据：*当前页面的列表数据* 和 *总记录数*  
+
+在`sql`层面上讲，需要两次查询：
+1. 根据查询条件用`limit`参数(在`oracle`用`rownum`)得到当前请求页面数据。
+2. 用相同的条件`count(*)`查询数据库中存在的总数。
+
+回到`Mybatis`，我们可以利用它的插件机制实现分页功能。  
+首先加上`PageHelper`的`maven`配置：
+```xml
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper</artifactId>
+    <version>3.7.1</version>
+</dependency>
+```
+在初始化sqlSessionFactory时加上插件配置：
+```java
+@Bean
+public SqlSessionFactoryBean sqlSessionFactory() throws IOException {
+    ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    Resource[] resources =  resolver.getResources("classpath*:com/nd/mathlearning/server/*/dao/mapper/*.xml");
+    Interceptor[] plugings = new Interceptor[1];
+
+    PageHelper pageHelper = new PageHelper();//mybatis分页插件
+    Properties p = new Properties();//插件属性配置
+    p.put("dialect", "mysql"); //数据库言
+    p.put("reasonable", "true");//参数合理化，如果pageNum<1会查询第一页，如果pageNum>pages会查询最后一页
+    p.put("offsetAsPageNum", "true"); //将RowBounds第一个参数offset当成pageNum页码使用
+    pageHelper.setProperties(p);
+    plugings[0] = pageHelper;
+
+    SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+    bean.setDataSource(dataSource());
+    bean.setMapperLocations(resources);
+    bean.setPlugins(plugings); //插件注入到sqlSessionFactory
+    bean.setConfigLocation(resolver.getResource("classpath:mybatis/mybatis-config.xml"));
+    return bean;
+}
+```
+其中属性配置详细信息参考项目主页。  
+
+在调用Mybatis的api时增加RowBounds参数实现分页：
+```java
+List<Country> list = sqlSession.selectList("x.y.selectIf", null, new RowBounds(1, 10));
+```
+
+
+项目主页:
+* [Mybatis-PageHelper](https://github.com/pagehelper/Mybatis-PageHelper)
