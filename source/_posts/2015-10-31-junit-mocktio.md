@@ -2,7 +2,7 @@ title: Spring Restful Api 单元测试
 comments: true
 date: 2015-10-31 16:39:58
 tags:
-categories:
+categories: java
 ---
 
 和任何做产品的公司一样，软件公司对其软件产品的质量也是十分看重。  

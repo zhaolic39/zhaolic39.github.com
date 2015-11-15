@@ -63,7 +63,7 @@ pagination_dir: page
 # Extensions
 ## Plugins: http://hexo.io/plugins/
 ## Themes: http://hexo.io/themes/
-theme: yilia
+theme: next
 
 # Deployment
 ## Docs: http://hexo.io/docs/deployment.html
@@ -78,3 +78,7 @@ duoshuo_shortname: zhaolic39
 # JiaThis 分享服务
 jiathis: true
 baidu_analytics: 8a17e6fe33b663397b14118d1eabc451
+
+# Social links
+social:
+  github: https://github.com/zhaolic39
